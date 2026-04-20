@@ -100,6 +100,47 @@
     </div>
   </div>
 
+  <script>
+    // Diagnostic: surface any error that would otherwise silently kill the mount
+    window.__bootErrors = [];
+    window.addEventListener("error", function(e) {
+      window.__bootErrors.push({ msg: e.message, src: e.filename, line: e.lineno });
+      showBootError();
+    });
+    window.addEventListener("unhandledrejection", function(e) {
+      window.__bootErrors.push({ msg: "Promise rejection: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)) });
+      showBootError();
+    });
+    function showBootError() {
+      var splash = document.getElementById("boot-splash");
+      if (!splash) return;
+      var errs = window.__bootErrors.map(function(e){
+        return '<div style="font-family:Menlo,Consolas,monospace;font-size:11px;color:#B42318;margin:4px 0;padding:6px;background:#FEF3F2;border:1px solid #FDA29B;border-radius:4px;text-align:left;word-break:break-all;">' +
+               (e.msg || "Unknown error") +
+               (e.src ? "<br><span style=\"color:#9CA3AF;\">" + e.src.split("/").pop() + ":" + e.line + "</span>" : "") +
+               "</div>";
+      }).join("");
+      splash.innerHTML =
+        '<div style="max-width:640px;padding:32px;text-align:center;">' +
+          '<div style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:10px;background:#FEE4E2;margin-bottom:14px;">' +
+            '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#B42318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>' +
+          '</div>' +
+          '<div style="font-size:15px;font-weight:600;color:#B42318;margin-bottom:6px;">Platform failed to initialize</div>' +
+          '<div style="font-size:12px;color:#6B7280;margin-bottom:14px;">The UI bundle threw an error before React could mount. Details below — press F12 to see the full stack.</div>' +
+          '<div style="max-height:260px;overflow-y:auto;">' + errs + '</div>' +
+          '<div style="margin-top:18px;"><button onclick="location.reload()" style="padding:8px 14px;border-radius:6px;background:#1E3A6B;color:#fff;border:0;font-size:13px;cursor:pointer;">Retry</button></div>' +
+        '</div>';
+    }
+    // Watchdog: if splash hasn't been replaced in 25s, show a message
+    setTimeout(function() {
+      var s = document.getElementById("boot-splash");
+      if (!s) return; // React mounted — all good
+      if (window.__bootErrors.length > 0) return; // already showing errors
+      s.querySelector("div:last-child").innerHTML =
+        '<div style="font-size:11px;color:#B45309;margin-top:14px;">Still loading after 25s — something is blocked. Press F12 → Console to see errors.</div>';
+    }, 25000);
+  </script>
+
   <script type="text/babel" data-presets="react">
     const { useState, useEffect, useRef, useMemo, useReducer, useCallback, createContext, useContext, Fragment } = React;
     const {
